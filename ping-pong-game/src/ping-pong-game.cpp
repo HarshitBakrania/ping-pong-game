@@ -87,6 +87,7 @@ class BotPaddle : public Paddle {
 public:
     BotPaddle(float x, float y) : Paddle(x, y) {};
 
+    // Bot movement
     void Update(int ball_y) {
         if (y + height / 2 > ball_y) {
             y -= speed;
@@ -120,12 +121,14 @@ int main() {
         // Ball-Paddle collision handling
         if (CheckCollisionCircleRec(Vector2{ ball.x, ball.y }, ball.radius, Rectangle{ player.x, player.y, player.width, player.height })) {
             ball.speedX *= -1;
+            // Max speed
             if (abs(ball.speedX) < 15) {
                 ball.speedX += (ball.speedX > 0) ? 1 : -1;
             }
         }
         if (CheckCollisionCircleRec(Vector2{ ball.x, ball.y }, ball.radius, Rectangle{ bot.x, bot.y, bot.width, bot.height })) {
             ball.speedX *= -1;
+            // Max speed
             if (abs(ball.speedX) < 15) {
                 ball.speedX += (ball.speedX > 0) ? 1 : -1;
             }
