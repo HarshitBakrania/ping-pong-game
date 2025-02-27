@@ -1,127 +1,152 @@
 #include <iostream>
 #include <raylib.h>
+#include <cmath>
 
 class Ball {
 public:
-	float x, y;
-	int speedX, speedY;
-	int radius;
+    float x, y;
+    int speedX, speedY;
+    int radius;
 
-	void Draw() {
-		DrawCircle(x, y, radius, WHITE);
-	}
+    Ball(int screen_width, int screen_height) {
+        x = screen_width / 2;
+        y = screen_height / 2;
+        radius = 20;
+        speedX = (GetRandomValue(0, 1) == 0) ? -7 : 7;
+        speedY = (GetRandomValue(0, 1) == 0) ? -7 : 7;
+    }
 
-	void Upate() {
-		x += speedX;
-		y += speedY;
+    void Update(int& botScore, int& playerScore) {
+        x += speedX;
+        y += speedY;
 
-		if (y + radius >= GetScreenHeight() || y - radius <= 0) {
-			speedY *= -1;
-		}
+        // Bounce off top and bottom walls
+        if (y + radius >= GetScreenHeight() || y - radius <= 0) {
+            speedY *= -1;
+        }
 
-		if (x + radius >= GetScreenWidth() || x - radius <= 0) {
-			speedX *= -1;
-		} 
-	}
+        // Score handling
+        if (x + radius >= GetScreenWidth()) {
+            botScore++;
+            ResetBall();
+        }
+        else if (x - radius <= 0) {
+            playerScore++;
+            ResetBall();
+        }
+    }
+
+    void ResetBall() {
+        x = GetScreenWidth() / 2;
+        y = GetScreenHeight() / 2;
+        speedX = (GetRandomValue(0, 1) == 0) ? -7 : 7;
+        speedY = (GetRandomValue(0, 1) == 0) ? -7 : 7;
+    }
+
+    void Draw() {
+        DrawCircle(x, y, radius, WHITE);
+    }
 };
 
 class Paddle {
 protected:
-	void LimitMovement() {
-		if (y <= 0) {
-			y = 0;
-		}
-		else if (y + height >= GetScreenHeight()) {
-			y = GetScreenHeight() - height;
-		}
-	}
+    void LimitMovement() {
+        if (y <= 0) y = 0;
+        else if (y + height >= GetScreenHeight()) y = GetScreenHeight() - height;
+    }
 
 public:
-	float x, y;
-	float width, height;
-	int speed;
+    float x, y;
+    float width, height;
+    int speed;
 
-	void Draw(Color color) {
-		DrawRectangle(x, y, width, height, color);
-	}
+    Paddle(float x, float y) {
+        this->x = x;
+        this->y = y;
+        width = 25;
+        height = 120;
+        speed = 7;
+    }
 
-	void Update() {
-		if (IsKeyDown(KEY_UP)) {
-			y = y - speed;
-		}
-		else if (IsKeyDown(KEY_DOWN)) {
-			y = y + speed;
-		}
-		LimitMovement();
-	}
+    void Update() {
+        if (IsKeyDown(KEY_UP)) {
+            y -= speed;
+        }
+        else if (IsKeyDown(KEY_DOWN)) {
+            y += speed;
+        }
+        LimitMovement();
+    }
+
+    void Draw(Color color) {
+        DrawRectangle(x, y, width, height, color);
+    }
 };
 
-class BotPaddle: public Paddle {
+class BotPaddle : public Paddle {
 public:
-	void Update(int ball_y) {
-		if (y + height / 2 > ball_y) {
-			y -= speed;
-		}
-		else if (y + height / 2 <= ball_y) {
-			y += speed;
-		}
-		LimitMovement();
-	}
+    BotPaddle(float x, float y) : Paddle(x, y) {};
+
+    void Update(int ball_y) {
+        if (y + height / 2 > ball_y) {
+            y -= speed;
+        }
+        else if (y + height / 2 < ball_y) {
+            y += speed;
+        }
+        LimitMovement();
+    }
 };
 
 int main() {
-	std::cout << "Starting game!" << std::endl;
-	const int screen_height = 800;
-	const int screen_width = 1280;
-	InitWindow(screen_width, screen_height, "Ping Pong Game");
-	SetTargetFPS(60);
+    const int screen_width = 1280;
+    const int screen_height = 800;
+    InitWindow(screen_width, screen_height, "Ping Pong Game");
+    SetTargetFPS(60);
 
-	Ball ball;
-	ball.x = screen_width / 2;
-	ball.y = screen_height / 2;
-	ball.radius = 20;
-	ball.speedX = 7;
-	ball.speedY = 7;
+    int playerScore = 0;
+    int botScore = 0;
 
-	Paddle player;
-	player.width = 25;
-	player.height = 120;
-	player.x = screen_width - player.width - 10;
-	player.y = screen_height / 2 - player.height / 2;
-	player.speed = 6;
+    Ball ball(screen_width, screen_height);
+    Paddle player(screen_width - 35, screen_height / 2 - 60);
+    BotPaddle bot(10, screen_height / 2 - 60);
 
-	BotPaddle bot;
-	bot.width = 25;
-	bot.height = 120;
-	bot.x = 10;
-	bot.y = screen_height / 2 - bot.height / 2;
-	bot.speed = 6;
+    while (!WindowShouldClose()) {
+        // Update game objects
+        ball.Update(botScore, playerScore);
+        player.Update();
+        bot.Update(ball.y);
 
-	while (WindowShouldClose() == false) {
-		BeginDrawing();
+        // Ball-Paddle collision handling
+        if (CheckCollisionCircleRec(Vector2{ ball.x, ball.y }, ball.radius, Rectangle{ player.x, player.y, player.width, player.height })) {
+            ball.speedX *= -1;
+            if (abs(ball.speedX) < 15) {
+                ball.speedX += (ball.speedX > 0) ? 1 : -1;
+            }
+        }
+        if (CheckCollisionCircleRec(Vector2{ ball.x, ball.y }, ball.radius, Rectangle{ bot.x, bot.y, bot.width, bot.height })) {
+            ball.speedX *= -1;
+            if (abs(ball.speedX) < 15) {
+                ball.speedX += (ball.speedX > 0) ? 1 : -1;
+            }
+        }
 
-		// Updating position
-		ball.Upate();
-		player.Update();
-		bot.Update(ball.y);
+        BeginDrawing();
+        ClearBackground(BLACK);
 
-		// Checking for collisions
-		if (CheckCollisionCircleRec(Vector2{ ball.x, ball.y }, ball.radius, Rectangle{ player.x, player.y, player.width, player.height })) {
-			ball.speedX *= -1;
-		}
-		if (CheckCollisionCircleRec(Vector2{ ball.x, ball.y }, ball.radius, Rectangle{ bot.x, bot.y, bot.width, bot.height })) {
-			ball.speedX *= -1;
-		}
+        // Draw objects
+        DrawLine(screen_width / 2, 0, screen_width / 2, screen_height, WHITE);
+        ball.Draw();
+        player.Draw(BLUE);
+        bot.Draw(RED);
 
-		// Drawing ball and paddles
-		ClearBackground(BLACK);
-		DrawLine(screen_width / 2, 0, screen_width / 2, screen_height, WHITE);
-		ball.Draw();
-		bot.Draw(WHITE);
-		player.Draw(BLUE);
-		EndDrawing();
-	}
+        // Display Score
+        DrawText(TextFormat("%i", botScore), screen_width / 4 - 20, 20, 80, WHITE);
+        DrawText(TextFormat("%i", playerScore), 3 * screen_width / 4 - 20, 20, 80, WHITE);
 
-	CloseWindow();
-	return 0;
-};
+        EndDrawing();
+    }
+
+    CloseWindow();
+    return 0;
+}
