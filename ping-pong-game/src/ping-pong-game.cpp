@@ -26,29 +26,46 @@ public:
 };
 
 class Paddle {
-public:
-	float x, y;
-	float width, height;
-	int speed;
-
-	void Draw() {
-		DrawRectangle(x, y, width, height, BLUE);
-	}
-
-	void Update() {
+protected:
+	void LimitMovement() {
 		if (y <= 0) {
 			y = 0;
 		}
 		else if (y + height >= GetScreenHeight()) {
 			y = GetScreenHeight() - height;
 		}
+	}
 
+public:
+	float x, y;
+	float width, height;
+	int speed;
+
+	void Draw(Color color) {
+		DrawRectangle(x, y, width, height, color);
+	}
+
+	void Update() {
 		if (IsKeyDown(KEY_UP)) {
 			y = y - speed;
 		}
 		else if (IsKeyDown(KEY_DOWN)) {
 			y = y + speed;
 		}
+		LimitMovement();
+	}
+};
+
+class BotPaddle: public Paddle {
+public:
+	void Update(int ball_y) {
+		if (y + height / 2 > ball_y) {
+			y -= speed;
+		}
+		else if (y + height / 2 <= ball_y) {
+			y += speed;
+		}
+		LimitMovement();
 	}
 };
 
@@ -73,19 +90,35 @@ int main() {
 	player.y = screen_height / 2 - player.height / 2;
 	player.speed = 6;
 
+	BotPaddle bot;
+	bot.width = 25;
+	bot.height = 120;
+	bot.x = 10;
+	bot.y = screen_height / 2 - bot.height / 2;
+	bot.speed = 6;
+
 	while (WindowShouldClose() == false) {
 		BeginDrawing();
 
 		// Updating position
 		ball.Upate();
 		player.Update();
+		bot.Update(ball.y);
+
+		// Checking for collisions
+		if (CheckCollisionCircleRec(Vector2{ ball.x, ball.y }, ball.radius, Rectangle{ player.x, player.y, player.width, player.height })) {
+			ball.speedX *= -1;
+		}
+		if (CheckCollisionCircleRec(Vector2{ ball.x, ball.y }, ball.radius, Rectangle{ bot.x, bot.y, bot.width, bot.height })) {
+			ball.speedX *= -1;
+		}
 
 		// Drawing ball and paddles
 		ClearBackground(BLACK);
 		DrawLine(screen_width / 2, 0, screen_width / 2, screen_height, WHITE);
 		ball.Draw();
-		DrawRectangle(10, screen_height / 2 - 60, 25, 120, WHITE);
-		player.Draw();
+		bot.Draw(WHITE);
+		player.Draw(BLUE);
 		EndDrawing();
 	}
 
