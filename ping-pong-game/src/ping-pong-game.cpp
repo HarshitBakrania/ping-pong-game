@@ -16,13 +16,14 @@ public:
         speedY = (GetRandomValue(0, 1) == 0) ? -7 : 7;
     }
 
-    void Update(int& botScore, int& playerScore) {
+    void Update(int& botScore, int& playerScore, Sound sfx) {
         x += speedX;
         y += speedY;
 
         // Bounce off top and bottom walls
         if (y + radius >= GetScreenHeight() || y - radius <= 0) {
             speedY *= -1;
+            PlaySound(sfx);
         }
 
         // Score handling
@@ -104,6 +105,8 @@ int main() {
     const int screen_height = 800;
     InitWindow(screen_width, screen_height, "Ping Pong Game");
     SetTargetFPS(60);
+    InitAudioDevice();
+    Sound sfx = LoadSound("assets/ping-pong-sfx.mp3");
 
     int playerScore = 0;
     int botScore = 0;
@@ -114,22 +117,24 @@ int main() {
 
     while (!WindowShouldClose()) {
         // Update game objects
-        ball.Update(botScore, playerScore);
+        ball.Update(botScore, playerScore, sfx);
         player.Update();
         bot.Update(ball.y);
 
         // Ball-Paddle collision handling
         if (CheckCollisionCircleRec(Vector2{ ball.x, ball.y }, ball.radius, Rectangle{ player.x, player.y, player.width, player.height })) {
+            PlaySound(sfx);
             ball.speedX *= -1;
             // Max speed
-            if (abs(ball.speedX) < 15) {
+            if (abs(ball.speedX) < 20) {
                 ball.speedX += (ball.speedX > 0) ? 1 : -1;
             }
         }
         if (CheckCollisionCircleRec(Vector2{ ball.x, ball.y }, ball.radius, Rectangle{ bot.x, bot.y, bot.width, bot.height })) {
+            PlaySound(sfx);
             ball.speedX *= -1;
             // Max speed
-            if (abs(ball.speedX) < 15) {
+            if (abs(ball.speedX) < 20) {
                 ball.speedX += (ball.speedX > 0) ? 1 : -1;
             }
         }
@@ -150,6 +155,7 @@ int main() {
         EndDrawing();
     }
 
+    CloseAudioDevice();
     CloseWindow();
     return 0;
 }
